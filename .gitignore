@@ -1,0 +1,7 @@
+node_modules
+.idea
+.DS_Store
+jest-html-reporters-attach
+jest_html_reporters.html
+report.html
+allure-results
