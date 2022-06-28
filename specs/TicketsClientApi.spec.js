@@ -100,9 +100,7 @@ describe('API тесты клиентского приложения', () => {
   test('Оформление заказа /api/client/?action=order.make 200', async () => {
     const auth = environment.auth;
     const uid = BuilderUid();
-    console.log(uid);
     const ticketId = await BuilderCart(auth, uid);
-    console.log(ticketId);
     const params = new URLSearchParams(
         {
           city: constants.cityId,
@@ -112,11 +110,9 @@ describe('API тесты клиентского приложения', () => {
           email: faker.internet.email()
         },
       );
-    console.log(params);
     let response = await api().TicketClient().get_order_make(auth, params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    console.log(jsonData);
     expect(jsonData.status).toEqual("0");
     expect(jsonData.result.id).toBeDefined;
     expect(jsonData.result.id).toBeGreaterThan(0);
@@ -142,7 +138,6 @@ describe('API тесты клиентского приложения', () => {
     const response = await api().TicketClient().get_order_sold(auth, params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    console.log(jsonData);
     expect(jsonData.status).toEqual("0");  
     await BuilderReturn(auth, orderId, ticketId);
   });
