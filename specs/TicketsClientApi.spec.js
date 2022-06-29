@@ -1,8 +1,9 @@
 import api from '../framework/services';
 import constants from '../framework/config/constants';
-import { BuilderCancel, BuilderCart, BuilderHash, BuilderOrder, BuilderReturn, BuilderSold, BuilderTickets, BuilderUid } from '../framework/fixtures/builder/builderTickets';
-const { faker } = require('@faker-js/faker');
-process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+import { BuilderCancel, BuilderCart, BuilderOrder, BuilderReturn, BuilderTickets } from '../framework/fixtures/builder/builderArrange';
+import { BuilderHash, BuilderUid, BuilderUser } from '../framework/fixtures/builder/builderData';
+import chai from 'chai';
+const assert = chai.assert;
 const environment = {};
 
 describe('API тесты клиентского приложения', () => {
@@ -10,46 +11,32 @@ describe('API тесты клиентского приложения', () => {
     environment.auth = BuilderHash();
     return  environment.auth;
   });
-  test('Авторизация пользователя. get api/client/?action=login 200', async () => {
+  test('Авторизация пользователя. get client/?action=login 200', async () => {
     const auth = environment.auth;
-    const response = await api().TicketClient().get_login(auth);  
+    const response = await api().KassaInform().getLogin(auth);  
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    expect(jsonData.status).toEqual("0"); 
+    assert.equal(jsonData.status, '0', 'Запрос выполнен успешно. Нет errors');
     expect(jsonData.result.roles.seller).toEqual(1); 
     expect(jsonData.result.roles.returner).toEqual(1);     
    
   });
-  test('Получение списка городов get api/client/?action=city.list 200', async () => {
+  test('Получение списка городов get client/?action=city.list 200', async () => {
     const auth = environment.auth;
-    const response = await api().TicketClient().get_cities(auth);
-    expect(response.status).toEqual(200);
+    const response = await api().KassaInform().getCities(auth);
     const jsonData = response.body;
+    assert.equal(jsonData.status, '0', 'Запрос выполнен успешно. Нет errors');
+    let cityName = '';
     jsonData.result.cities.forEach(element => {
       if (element.id === constants.cityId) {
-        expect(element.name).toContain(constants.cityName);      
+        cityName = element.name;
       }
-    });    
+    }); 
+    assert.include(cityName, constants.cityName, 'В ответе есть г. Пермь');   
    
   });
-  test('Получений списка событий get /api/client/?action=event.list 200', async () => {
-    const params = new URLSearchParams(
-        {
-          auth: environment.auth,
-          city: constants.cityId,
-        },
-      );
-    const response = await api().TicketClient().get_events(params);
-    expect(response.status).toEqual(200);
-    const jsonData = response.body;
-    jsonData.result.events.forEach(element => {
-      if (element.id === constants.event) {
-        expect(element.name).toEqual(constants.eventName); 
-        expect(element.date).toEqual(constants.eventDate);
-      }
-    });    
-  });
-  test('Получение детальной информации о событии get /api/client/?action=event.info 200', async () => {
+  
+  test('Получение детальной информации о событии get client/?action=event.info 200', async () => {
     const params = new URLSearchParams(
         {
           auth: environment.auth,
@@ -57,15 +44,15 @@ describe('API тесты клиентского приложения', () => {
           id: constants.event,
         },
       );
-    const response = await api().TicketClient().get_event_info(params);
+    const response = await api().KassaInform().getEventInfo(params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    expect(jsonData.status).toEqual('0');
+    assert.equal(jsonData.status, '0', 'Запрос выполнен успешно. Нет errors');
     expect(jsonData.result.id).toEqual(constants.event);
     expect(jsonData.result.name).toEqual(constants.eventName);
     expect(jsonData.result.version_id).toEqual(constants.versionId);   
   });
-  test('Получение билетов на событие /api/client/?action=sector.places 200', async () => {
+  test('Получение билетов на событие client/?action=sector.places 200', async () => {
     const auth = environment.auth;
     const params = new URLSearchParams(
         {
@@ -73,13 +60,13 @@ describe('API тесты клиентского приложения', () => {
           event_id: constants.event,
         },
       );
-    const response = await api().TicketClient().get_places(auth,params);
+    const response = await api().KassaInform().getPlaces(auth,params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
     const ArrayPlaces = jsonData.result.places;
     expect(ArrayPlaces.length).toBeGreaterThan(0);    
   });
-  test('Добавление билетов в корзину. Бронирование /api/client/?action=cart.add 200', async () => {
+  test('Добавление билетов в корзину. Бронирование client/?action=cart.add 200', async () => {
     const auth = environment.auth;
     const uid = BuilderUid();
     const ticketId = await BuilderTickets(auth);
@@ -90,37 +77,28 @@ describe('API тесты клиентского приложения', () => {
           uid: uid
         },
       );
-    let response = await api().TicketClient().get_cart_add(auth, params);
+    let response = await api().KassaOrderCreate().getCartAdd(auth, params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    expect(jsonData.status).toEqual("0"); 
-    response = await api().TicketClient().get_cart_remove(auth, params);
+    assert.equal(jsonData.status, '0', 'Запрос выполнен успешно. Нет errors');
+    response = await api().KassaOrderCreate().getCartRemove(auth, params); //Возврат билета. Чистка данных
   });
   
-  test('Оформление заказа /api/client/?action=order.make 200', async () => {
+  test('Оформление заказа client/?action=order.make 200', async () => {
     const auth = environment.auth;
     const uid = BuilderUid();
     const ticketId = await BuilderCart(auth, uid);
-    const params = new URLSearchParams(
-        {
-          city: constants.cityId,
-          uid: uid,
-          name: faker.name.findName(),
-          phone: faker.phone.phoneNumber('8###-###-####'),
-          email: faker.internet.email()
-        },
-      );
-    let response = await api().TicketClient().get_order_make(auth, params);
+    const params = new URLSearchParams(BuilderUser(uid));
+    let response = await api().KassaOrderCreate().getOrderMake(auth, params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
     expect(jsonData.status).toEqual("0");
-    expect(jsonData.result.id).toBeDefined;
     expect(jsonData.result.id).toBeGreaterThan(0);
     const orderId = jsonData.result.id;
-    await BuilderCancel(auth, orderId);
+    await BuilderCancel(auth, orderId); //Возврат заказа. Чистка данных
    });
 
-  test('Продажа заказа /api/client/?action=order.sold 200', async () => {
+  test('Продажа заказа client/?action=order.sold 200', async () => {
     const auth = environment.auth;
     const uid = BuilderUid();
     const ArrayVariables = await BuilderOrder(auth, uid);
@@ -135,10 +113,10 @@ describe('API тесты клиентского приложения', () => {
         payment_method: 0
       }
     );
-    const response = await api().TicketClient().get_order_sold(auth, params);
+    const response = await api().KassaOrderEdit().getOrderSold(auth, params);
     expect(response.status).toEqual(200);
     const jsonData = response.body;
-    expect(jsonData.status).toEqual("0");  
-    await BuilderReturn(auth, orderId, ticketId);
+    assert.equal(jsonData.status, '0', 'Запрос выполнен успешно. Нет errors');
+    await BuilderReturn(auth, orderId, ticketId); //Возврат заказа. Чистка данных
   });
 });
